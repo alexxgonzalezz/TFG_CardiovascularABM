@@ -1,0 +1,12 @@
+# Parametros poblacionales iniciales
+EDAD_MEDIA = 55
+EDAD_STD = 10
+
+COLESTEROL_MEDIA = 220.0
+COLESTEROL_STD = 30.0
+
+PRESION_ARTERIAL_MEDIA = 130.0
+PRESION_ARTERIAL_STD = 15.0
+
+# Parámetros de simulación
+NUM_PACIENTES = 10
