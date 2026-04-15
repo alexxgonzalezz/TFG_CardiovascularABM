@@ -6,10 +6,9 @@ import random
 # Importar la clase Paciente y variables de configuración
 from agents.paciente import Paciente
 from configuration import settings
-# from mesa.datacollection import DataCollector
 
 class CardioModel(mesa.Model):
-    '''Modelo que gestiona la simulación de pacientes.'''
+    '''Modelo que gestiona la simulación de pacientes'''
 
     def __init__(self, num_pacientes):
         super().__init__()
@@ -29,14 +28,22 @@ class CardioModel(mesa.Model):
                 es_mujer = random.random() < settings.PROPORCION_MUJERES_MED
                 edad = max(18, int(np.random.normal(settings.EDAD_MEDIA, settings.EDAD_STD)))
 
-                # Variables de ingesta (gramos / día) basadas en Campana de Gauss
-                grasa_sat = max(1.0, np.random.normal(settings.GRASA_SAT_MEDIA_MED, settings.GRASA_SAT_STD_MED))
-                grasa_mono = max(1.0, np.random.normal(settings.GRASA_MONO_MEDIA_MED, settings.GRASA_MONO_STD_MED))
-                grasa_poli = max(1.0, np.random.normal(settings.GRASA_POLI_MEDIA_MED, settings.GRASA_POLI_STD_MED))
+                # ¿Abandona la dieta?
+                abandona = random.random() < settings.TASA_ABANDONO_MED
+                semana_abandono = random.randint(1, 12) if abandona else None # Abandona en alguna semana entre la 1 y la 12
 
-                # Variables de salud iniciales basadas en Campana de Gauss
-                col_total = np.random.normal(settings.COL_TOTAL_MEDIA_MED, settings.COL_TOTAL_STD_MED)
-                col_ldl = np.random.normal(settings.COL_LDL_MEDIA_MED, settings.COL_LDL_STD_MED)
+                # HÁBITOS BASE (Lo que comía antes de empezar la dieta)
+                calorias_base = max(1000, np.random.normal(settings.ENERGIA_MEDIA_MED_INICIAL, settings.ENERGIA_STD_MED_INICIAL))
+                pct_prot_base = np.random.normal(settings.PROT_PCT_MEDIA_MED_INICIAL, settings.PROT_PCT_STD_MED_INICIAL)
+                pct_carb_base = np.random.normal(settings.CARB_PCT_MEDIA_MED_INICIAL, settings.CARB_PCT_STD_MED_INICIAL)
+                pct_grasa_base = np.random.normal(settings.GRASA_PCT_MEDIA_MED_INICIAL, settings.GRASA_PCT_STD_MED_INICIAL)
+
+
+                # OBJETIVOS DE LA DIETA MEDITERRÁNEA
+                calorias = max(1000, np.random.normal(settings.ENERGIA_MEDIA_MED, settings.ENERGIA_STD_MED))
+                pct_prot = np.random.normal(settings.PROT_PCT_MEDIA_MED, settings.PROT_PCT_STD_MED)
+                pct_carb = np.random.normal(settings.CARB_PCT_MEDIA_MED, settings.CARB_PCT_STD_MED)
+                pct_grasa = np.random.normal(settings.GRASA_PCT_MEDIA_MED, settings.GRASA_PCT_STD_MED)
 
 
             # Grupo dieta baja en grasas
@@ -45,26 +52,32 @@ class CardioModel(mesa.Model):
                 es_mujer = random.random() < settings.PROPORCION_MUJERES_LOW_FAT
                 edad = max(18, int(np.random.normal(settings.EDAD_MEDIA, settings.EDAD_STD)))
 
-                # Variables de ingesta (gramos / día) basadas en Campana de Gauss
-                grasa_sat = max(1.0, np.random.normal(settings.GRASA_SAT_MEDIA_LOW_FAT, settings.GRASA_SAT_STD_LOW_FAT))
-                grasa_mono = max(1.0, np.random.normal(settings.GRASA_MONO_MEDIA_LOW_FAT, settings.GRASA_MONO_STD_LOW_FAT))
-                grasa_poli = max(1.0, np.random.normal(settings.GRASA_POLI_MEDIA_LOW_FAT, settings.GRASA_POLI_STD_LOW_FAT))
+                # ¿Abandona la dieta?
+                abandona = random.random() < settings.TASA_ABANDONO_LOW_FAT
+                semana_abandono = random.randint(1, 12) if abandona else None # Abandona en alguna semana entre la 1 y la 12
 
-                # Variables de salud iniciales basadas en Campana de Gauss
-                col_total = np.random.normal(settings.COL_TOTAL_MEDIA_LOW_FAT, settings.COL_TOTAL_STD_LOW_FAT)
-                col_ldl = np.random.normal(settings.COL_LDL_MEDIA_LOW_FAT, settings.COL_LDL_STD_LOW_FAT)
+                # HÁBITOS BASE (Lo que comía antes de empezar la dieta)
+                calorias_base = max(1000, np.random.normal(settings.ENERGIA_MEDIA_LOW_FAT_INICIAL, settings.ENERGIA_STD_LOW_FAT_INICIAL))
+                pct_prot_base = np.random.normal(settings.PROT_PCT_MEDIA_LOW_FAT_INICIAL, settings.PROT_PCT_STD_LOW_FAT_INICIAL)
+                pct_carb_base = np.random.normal(settings.CARB_PCT_MEDIA_LOW_FAT_INICIAL, settings.CARB_PCT_STD_LOW_FAT_INICIAL)
+                pct_grasa_base = np.random.normal(settings.GRASA_PCT_MEDIA_LOW_FAT_INICIAL, settings.GRASA_PCT_STD_LOW_FAT_INICIAL)
+
+                # OBJETIVOS DE LA DIETA BAJA EN GRASAS
+                calorias = max(1000, np.random.normal(settings.ENERGIA_MEDIA_LOW_FAT, settings.ENERGIA_STD_LOW_FAT))
+                pct_prot = np.random.normal(settings.PROT_PCT_MEDIA_LOW_FAT, settings.PROT_PCT_STD_LOW_FAT)
+                pct_carb = np.random.normal(settings.CARB_PCT_MEDIA_LOW_FAT, settings.CARB_PCT_STD_LOW_FAT)
+                pct_grasa = np.random.normal(settings.GRASA_PCT_MEDIA_LOW_FAT, settings.GRASA_PCT_STD_LOW_FAT)
+
+                # # Variables de salud iniciales basadas en Campana de Gauss
+                # col_total = np.random.normal(settings.COL_TOTAL_MEDIA_LOW_FAT, settings.COL_TOTAL_STD_LOW_FAT)
+                # col_ldl = np.random.normal(settings.COL_LDL_MEDIA_LOW_FAT, settings.COL_LDL_STD_LOW_FAT)
 
 
             # Instanciar el agente Paciente con sus características
-            paciente = Paciente(i, self, grupo, es_mujer, edad, grasa_sat, grasa_mono, grasa_poli, col_total, col_ldl)
+            paciente = Paciente(i, self, grupo, es_mujer, edad, abandona, semana_abandono,
+                                calorias_base, pct_prot_base, pct_carb_base, pct_grasa_base,
+                                calorias, pct_prot, pct_carb, pct_grasa)
             self.schedule.add(paciente)
-
-        # Recolector de datos (DataCollector)
-        # self.datacollector = DataCollector(
-        #     model_reporters={
-        #         "Colesterol_Medio": lambda m: np.mean([a.col_total for a in m.schedule.agents])
-        #     }
-        # )
     
     def step(self):
         '''Función que se ejecuta en cada paso de la simulación.'''
