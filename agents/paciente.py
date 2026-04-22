@@ -97,6 +97,8 @@ class Paciente(mesa.Agent):
         self.grasa_mono = self.grasas * self.grasa_mono_real
         self.grasa_poli = self.grasas * self.grasa_poli_real
 
+        self.estado_actual = estado
+
         return estado # Devuelve el estado del paciente (activo o abandono)
 
     def actualizar_biomarcadores(self):
@@ -131,8 +133,8 @@ class Paciente(mesa.Agent):
         # 5. Combinamos ambos factores para calcular la mejora total
         mejora_total = (calidad_grasas * 0.8) + (factor_calorias * 0.2) # Damos más peso a la calidad de las grasas que al déficit calórico
 
-        # 6. Establecemos un límite de reducción del colesterol LDL (máximo 13% de mejora respecto al valor inicial)
-        mejora_max_ldl = col_ldl_inicial * 0.13
+        # 6. Establecemos un límite de reducción del colesterol LDL (máximo 18% de mejora respecto al valor inicial)
+        mejora_max_ldl = col_ldl_inicial * 0.18
         ldl_objetivo = col_ldl_inicial - (mejora_total * mejora_max_ldl)
 
         # 7. Función asíntotica (curva más pronunciada al principio y luego se estabiliza)
@@ -155,26 +157,26 @@ class Paciente(mesa.Agent):
         # Actualizar los biomarcadores de salud en función de la ingesta 
         self.actualizar_biomarcadores()
 
-        # Prueba con 5 pacientes para analizar su evolución semanal de ingesta
-        if self.unique_id < 5:
-            # Porcentajes de macronutrientes consumidos cada semana
-            pct_proteinas = (self.proteinas * 4 / self.calorias) * 100
-            pct_carbohidratos = (self.carbohidratos * 4 / self.calorias) * 100
-            pct_grasas = (self.grasas * 9 / self.calorias) * 100
+        # # Prueba con 5 pacientes para analizar su evolución semanal de ingesta
+        # if self.unique_id < 5:
+        #     # Porcentajes de macronutrientes consumidos cada semana
+        #     pct_proteinas = (self.proteinas * 4 / self.calorias) * 100
+        #     pct_carbohidratos = (self.carbohidratos * 4 / self.calorias) * 100
+        #     pct_grasas = (self.grasas * 9 / self.calorias) * 100
 
-            # Porcentajes de tipos de grasa consumidos cada semana
-            pct_sat = (self.grasa_sat / self.grasas) * 100
-            pct_mono = (self.grasa_mono / self.grasas) * 100
-            pct_poli = (self.grasa_poli / self.grasas) * 100
+        #     # Porcentajes de tipos de grasa consumidos cada semana
+        #     pct_sat = (self.grasa_sat / self.grasas) * 100
+        #     pct_mono = (self.grasa_mono / self.grasas) * 100
+        #     pct_poli = (self.grasa_poli / self.grasas) * 100
 
-            print(f'    • Paciente {self.unique_id} ({self.grupo}) [{estado_paciente}] -> '
-                    f'Calorías: {self.calorias:.1f} kcal | '
-                    f'Macros: Prot -> {self.proteinas:.1f}g ({pct_proteinas:.1f}%), '
-                    f'Carb: {self.carbohidratos:.1f}g ({pct_carbohidratos:.1f}%), ' 
-                    f'Grasas: {self.grasas:.1f}g ({pct_grasas:.1f}%) '
-                    f'[Sat: {self.grasa_sat:.1f}g ({pct_sat:.1f}%), Mono: {self.grasa_mono:.1f}g ({pct_mono:.1f}%), Poli: {self.grasa_poli:.1f}g ({pct_poli:.1f}%)] | '
-                    f'Colesterol: {self.col_total:.1f} mmol/L | '
-                    f'LDL: {self.col_ldl:.1f} mmol/L')
+        #     print(f'    • Paciente {self.unique_id} ({self.grupo}) [{estado_paciente}] -> '
+        #             f'Calorías: {self.calorias:.1f} kcal | '
+        #             f'Macros: Prot -> {self.proteinas:.1f}g ({pct_proteinas:.1f}%), '
+        #             f'Carb: {self.carbohidratos:.1f}g ({pct_carbohidratos:.1f}%), ' 
+        #             f'Grasas: {self.grasas:.1f}g ({pct_grasas:.1f}%) '
+        #             f'[Sat: {self.grasa_sat:.1f}g ({pct_sat:.1f}%), Mono: {self.grasa_mono:.1f}g ({pct_mono:.1f}%), Poli: {self.grasa_poli:.1f}g ({pct_poli:.1f}%)] | '
+        #             f'Colesterol: {self.col_total:.1f} mmol/L | '
+        #             f'LDL: {self.col_ldl:.1f} mmol/L')
 
         # # Simulación completa de ingesta semanal
         # pct_proteinas = (self.proteinas * 4 / self.calorias) * 100
