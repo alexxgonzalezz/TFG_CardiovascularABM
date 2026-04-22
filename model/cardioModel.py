@@ -44,7 +44,7 @@ class CardioModel(mesa.Model):
 
                 # OBJETIVOS DE LA DIETA MEDITERRÁNEA
                 deficit_med = max(100, np.random.normal(settings.DEFICIT_MEDIA_MED, 200))
-                calorias = calorias_base - deficit_med
+                calorias = max(1000, calorias_base - deficit_med)
                 pct_prot = np.random.normal(settings.PROT_PCT_MEDIA_MED, settings.PROT_PCT_STD_MED)
                 pct_carb = np.random.normal(settings.CARB_PCT_MEDIA_MED, settings.CARB_PCT_STD_MED)
                 pct_grasa = np.random.normal(settings.GRASA_PCT_MEDIA_MED, settings.GRASA_PCT_STD_MED)
@@ -78,7 +78,7 @@ class CardioModel(mesa.Model):
 
                 # OBJETIVOS DE LA DIETA BAJA EN GRASAS
                 deficit_low_fat = max(100, np.random.normal(settings.DEFICIT_MEDIA_LOW_FAT, 100))
-                calorias = calorias_base - deficit_low_fat
+                calorias = max(1000, (calorias_base - deficit_low_fat))
                 pct_prot = np.random.normal(settings.PROT_PCT_MEDIA_LOW_FAT, settings.PROT_PCT_STD_LOW_FAT)
                 pct_carb = np.random.normal(settings.CARB_PCT_MEDIA_LOW_FAT, settings.CARB_PCT_STD_LOW_FAT)
                 pct_grasa = np.random.normal(settings.GRASA_PCT_MEDIA_LOW_FAT, settings.GRASA_PCT_STD_LOW_FAT)
@@ -97,9 +97,29 @@ class CardioModel(mesa.Model):
                                 calorias, pct_prot, pct_carb, pct_grasa, pct_grasa_sat, pct_grasa_mono, pct_grasa_poli,
                                 col_total, col_ldl)
             self.schedule.add(paciente)
+
+        # Inicializar DataCollector
+        self.datacollector = mesa.DataCollector(
+            agent_reporters={
+                "Grupo": "grupo",
+                "Estado": "estado_actual",
+                "Calorías": "calorias",
+                "Proteínas": "proteinas",
+                "Carbohidratos": "carbohidratos",
+                "Grasa_Total_g": "grasas",
+                "Grasa_Sat_g": "grasa_sat",
+                "Grasa_Mono_g": "grasa_mono",
+                "Grasa_Poli_g": "grasa_poli",
+                "Colesterol_LDL": "col_ldl"
+            }
+        )
+
+        # Recolectar el colesterol ldl del "Día 0"
+        self.datacollector.collect(self)
     
     def step(self):
         '''Función que se ejecuta en cada paso de la simulación.'''
-        print(f"\n--- Iniciando Semana {self.current_step} ---")
+        # print(f"\n--- Iniciando Semana {self.current_step} ---")
         self.schedule.step()
+        self.datacollector.collect(self)
         self.current_step += 1
