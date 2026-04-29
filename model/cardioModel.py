@@ -43,7 +43,7 @@ class CardioModel(mesa.Model):
 
 
                 # OBJETIVOS DE LA DIETA MEDITERRÁNEA
-                deficit_med = max(100, np.random.normal(settings.DEFICIT_MEDIA_MED, 200))
+                deficit_med = max(100, np.random.normal(settings.DEFICIT_MEDIA_MED, 100))
                 calorias = max(1000, calorias_base - deficit_med)
                 pct_prot = np.random.normal(settings.PROT_PCT_MEDIA_MED, settings.PROT_PCT_STD_MED)
                 pct_carb = np.random.normal(settings.CARB_PCT_MEDIA_MED, settings.CARB_PCT_STD_MED)
@@ -110,6 +110,7 @@ class CardioModel(mesa.Model):
                 "Grasa_Sat_g": "grasa_sat",
                 "Grasa_Mono_g": "grasa_mono",
                 "Grasa_Poli_g": "grasa_poli",
+                "Otras_Grasas_g": "otras_grasas",
                 "Colesterol_LDL": "col_ldl"
             }
         )
