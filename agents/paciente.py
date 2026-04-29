@@ -45,7 +45,7 @@ class Paciente(mesa.Agent):
     def comer(self):
         '''Simula la ingesta semanal del paciente'''
 
-        # Asumimos que el paciente tiene una desviación del 2,5% respecto a su objetivo
+        # Asumimos que el paciente tiene una desviación del 2,5% respecto a su dieta 
         VARIABILIDAD_SEMANAL = 0.025
 
         # Comprobar abandono: ¿En qué semana estamos?
@@ -88,14 +88,13 @@ class Paciente(mesa.Agent):
         raw_mono = max(0.01, np.random.normal(self.pct_grasa_mono_objetivo, self.pct_grasa_mono_objetivo * VARIABILIDAD_SEMANAL))
         raw_poli = max(0.01, np.random.normal(self.pct_grasa_poli_objetivo, self.pct_grasa_poli_objetivo * VARIABILIDAD_SEMANAL))
 
-        suma_tipos_grasa = raw_sat + raw_mono + raw_poli
-        self.grasa_sat_real = raw_sat / suma_tipos_grasa
-        self.grasa_mono_real = raw_mono / suma_tipos_grasa
-        self.grasa_poli_real = raw_poli / suma_tipos_grasa
+        self.grasa_sat = self.grasas * raw_sat
+        self.grasa_mono = self.grasas * raw_mono
+        self.grasa_poli = self.grasas * raw_poli
 
-        self.grasa_sat = self.grasas * self.grasa_sat_real
-        self.grasa_mono = self.grasas * self.grasa_mono_real
-        self.grasa_poli = self.grasas * self.grasa_poli_real
+        # Guardamos un porcentaje para "otras grasas"
+        suma_grasas = self.grasa_sat + self.grasa_mono + self.grasa_poli
+        self.otras_grasas = max(0, self.grasas - suma_grasas)
 
         self.estado_actual = estado
 
@@ -107,11 +106,10 @@ class Paciente(mesa.Agent):
         # 1. Guardamos el colesterol LDL con el que parte el paciente
         if not hasattr(self, 'col_ldl_base'):
             self.col_ldl_base = self.col_ldl
-
         # Usamos nueva variable para no cambiar valor
         col_ldl_inicial = self.col_ldl_base
 
-        # 2. Comparar porcentajes de energía de grasas (Ingesta actual vs Habitos base)
+        # 2. Comparar porcentajes de energía de grasas (Ingesta actual vs Hábitos base)
         pct_sat_actual = (self.grasa_sat * 9.0) / self.calorias
         pct_mono_actual = (self.grasa_mono * 9.0) / self.calorias
         pct_poli_actual = (self.grasa_poli * 9.0) / self.calorias
@@ -122,19 +120,19 @@ class Paciente(mesa.Agent):
         mejora_mono = pct_mono_actual - self.pct_grasa_mono_base
         mejora_poli = pct_poli_actual - self.pct_grasa_poli_base
 
-        # 3. Puntuamos la mejora total 
-        puntuacion_grasas = (mejora_sat * 1.5) + (mejora_mono * 0.3) + (mejora_poli * 0.7)
+        # 3. Puntuamos la mejora de calidad de grasas como una puntuación entre 0 y 1
+        puntuacion_grasas = (mejora_sat * 1.5) + (mejora_mono * 1.0) + (mejora_poli * 0.3)
         calidad_grasas = max(0.0, min(1.0, puntuacion_grasas / 0.06)) # Normalizamos entre 0 y 1
 
-        # 4. Impacto del déficit calórico (+déficit = +mejoría)
+        # 4. También tenemos en cuenta el déficit calórico (+déficit = +mejoría)
         deficit = self.calorias_base - self.calorias
         factor_calorias = max(0.0, min(1.0, deficit / 700.0)) # Un déficit de 700 kcal da puntuación máxima (1.0)
 
         # 5. Combinamos ambos factores para calcular la mejora total
-        mejora_total = (calidad_grasas * 0.8) + (factor_calorias * 0.2) # Damos más peso a la calidad de las grasas que al déficit calórico
+        mejora_total = (calidad_grasas * 0.75) + (factor_calorias * 0.25) # Damos más peso a la calidad de las grasas que al déficit calórico
 
-        # 6. Establecemos un límite de reducción del colesterol LDL (máximo 18% de mejora respecto al valor inicial)
-        mejora_max_ldl = col_ldl_inicial * 0.18
+        # 6. Establecemos un límite de reducción del colesterol LDL (máximo 13% de mejora respecto al valor inicial)
+        mejora_max_ldl = col_ldl_inicial * 0.13
         ldl_objetivo = col_ldl_inicial - (mejora_total * mejora_max_ldl)
 
         # 7. Función asíntotica (curva más pronunciada al principio y luego se estabiliza)
@@ -149,41 +147,10 @@ class Paciente(mesa.Agent):
 
 
     def step(self):
-        '''Función que se ejecuta en cada paso (semana) de la simulación'''
+        '''Función que se ejecuta en cada semana de la simulación'''
 
         # Simular ingesta semanal del paciente
         estado_paciente = self.comer()
 
         # Actualizar los biomarcadores de salud en función de la ingesta 
         self.actualizar_biomarcadores()
-
-        # # Prueba con 5 pacientes para analizar su evolución semanal de ingesta
-        # if self.unique_id < 5:
-        #     # Porcentajes de macronutrientes consumidos cada semana
-        #     pct_proteinas = (self.proteinas * 4 / self.calorias) * 100
-        #     pct_carbohidratos = (self.carbohidratos * 4 / self.calorias) * 100
-        #     pct_grasas = (self.grasas * 9 / self.calorias) * 100
-
-        #     # Porcentajes de tipos de grasa consumidos cada semana
-        #     pct_sat = (self.grasa_sat / self.grasas) * 100
-        #     pct_mono = (self.grasa_mono / self.grasas) * 100
-        #     pct_poli = (self.grasa_poli / self.grasas) * 100
-
-        #     print(f'    • Paciente {self.unique_id} ({self.grupo}) [{estado_paciente}] -> '
-        #             f'Calorías: {self.calorias:.1f} kcal | '
-        #             f'Macros: Prot -> {self.proteinas:.1f}g ({pct_proteinas:.1f}%), '
-        #             f'Carb: {self.carbohidratos:.1f}g ({pct_carbohidratos:.1f}%), ' 
-        #             f'Grasas: {self.grasas:.1f}g ({pct_grasas:.1f}%) '
-        #             f'[Sat: {self.grasa_sat:.1f}g ({pct_sat:.1f}%), Mono: {self.grasa_mono:.1f}g ({pct_mono:.1f}%), Poli: {self.grasa_poli:.1f}g ({pct_poli:.1f}%)] | '
-        #             f'Colesterol: {self.col_total:.1f} mmol/L | '
-        #             f'LDL: {self.col_ldl:.1f} mmol/L')
-
-        # # Simulación completa de ingesta semanal
-        # pct_proteinas = (self.proteinas * 4 / self.calorias) * 100
-        # pct_carbohidratos = (self.carbohidratos * 4 / self.calorias) * 100
-        # pct_grasas = (self.grasas * 9 / self.calorias) * 100
-        # print(f'    • Paciente {self.unique_id} ({self.grupo}) [{estado_paciente}] -> '
-        #         f'Calorías: {self.calorias:.1f} kcal, '
-        #         f'Proteínas: {self.proteinas:.1f}g ({pct_proteinas:.1f}%), '
-        #         f'Carbohidratos: {self.carbohidratos:.1f}g ({pct_carbohidratos:.1f}%), '
-        #         f'Grasas: {self.grasas:.1f}g ({pct_grasas:.1f}%)')
