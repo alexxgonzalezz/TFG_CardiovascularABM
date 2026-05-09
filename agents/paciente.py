@@ -165,3 +165,4 @@ class Paciente(mesa.Agent):
 
         # Actualizar los biomarcadores de salud en función de la ingesta 
         self.actualizar_biomarcadores()
+        
