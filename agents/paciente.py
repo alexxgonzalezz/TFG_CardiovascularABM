@@ -5,8 +5,8 @@ class Paciente(mesa.Agent):
     '''Agente que representa a un paciente con factores de riesgo cardiovascular.'''
 
     def __init__(self, unique_id, model, grupo, es_mujer, edad, abandona, semana_abandono,
-                 calorias_base, pct_prot_base, pct_carb_base, pct_grasa_base, pct_grasa_sat_base, pct_grasa_mono_base, pct_grasa_poli_base,
-                 calorias, pct_prot, pct_carb, pct_grasa, pct_grasa_sat, pct_grasa_mono, pct_grasa_poli,
+                 calorias_base, pct_prot_base, pct_carb_base, pct_grasa_base, pct_grasa_sat_base, pct_grasa_mono_base, pct_grasa_poli_base, fibra_soluble_base,
+                 calorias, pct_prot, pct_carb, pct_grasa, pct_grasa_sat, pct_grasa_mono, pct_grasa_poli, fibra_soluble,
                  col_total, col_ldl):
         super().__init__(model)
 
@@ -28,6 +28,7 @@ class Paciente(mesa.Agent):
         self.pct_grasa_sat_base = pct_grasa_sat_base
         self.pct_grasa_mono_base = pct_grasa_mono_base
         self.pct_grasa_poli_base = pct_grasa_poli_base
+        self.fibra_soluble_base = fibra_soluble_base
 
         # Calorías (kcal) y macronuientes esenciales OBJETIVO (PORCENTAJES)
         self.calorias_objetivo = calorias
@@ -37,6 +38,7 @@ class Paciente(mesa.Agent):
         self.pct_grasa_sat_objetivo = pct_grasa_sat
         self.pct_grasa_mono_objetivo = pct_grasa_mono
         self.pct_grasa_poli_objetivo = pct_grasa_poli
+        self.fibra_soluble_objetivo = fibra_soluble
 
         # Variables de salud iniciales
         self.col_total = col_total
@@ -58,6 +60,7 @@ class Paciente(mesa.Agent):
             self.pct_grasa_sat_objetivo = self.pct_grasa_sat_base
             self.pct_grasa_mono_objetivo = self.pct_grasa_mono_base
             self.pct_grasa_poli_objetivo = self.pct_grasa_poli_base
+            self.fibra_soluble_objetivo = self.fibra_soluble_base
             estado = "ABANDONO"
 
         else:
@@ -66,6 +69,7 @@ class Paciente(mesa.Agent):
 
         # 1. Calorías reales consumidas cada semana (con variabilidad)
         self.calorias = max(1000, np.random.normal(self.calorias_objetivo, self.calorias_objetivo * VARIABILIDAD_SEMANAL))
+        self.fibra_soluble = max(0, np.random.normal(self.fibra_soluble_objetivo, self.fibra_soluble_objetivo * VARIABILIDAD_SEMANAL))
 
         # 2. Aplicar variabilidad a los porcentajes de macronutrientes objetivo
         proteinas_pct = max(0.01, np.random.normal(self.pct_prot_objetivo, self.pct_prot_objetivo * VARIABILIDAD_SEMANAL))
@@ -100,44 +104,51 @@ class Paciente(mesa.Agent):
 
         return estado # Devuelve el estado del paciente (activo o abandono)
 
+
     def actualizar_biomarcadores(self):
-        '''Función para actualizar los biomarcadores de salud del paciente en función de su ingesta real'''
+        '''Función para actualizar el colesterol LDL en función de la dieta y el déficit calórico'''
         
         # 1. Guardamos el colesterol LDL con el que parte el paciente
         if not hasattr(self, 'col_ldl_base'):
             self.col_ldl_base = self.col_ldl
-        # Usamos nueva variable para no cambiar valor
         col_ldl_inicial = self.col_ldl_base
 
-        # 2. Comparar porcentajes de energía de grasas (Ingesta actual vs Hábitos base)
-        pct_sat_actual = (self.grasa_sat * 9.0) / self.calorias
-        pct_mono_actual = (self.grasa_mono * 9.0) / self.calorias
-        pct_poli_actual = (self.grasa_poli * 9.0) / self.calorias
+        # 2. Calcular % de energía aportada por cada grasa ACTUALMENTE (Escala 0-100)
+        S_actual = ((self.grasa_sat * 9.0) / self.calorias) * 100
+        M_actual = ((self.grasa_mono * 9.0) / self.calorias) * 100
+        P_actual = ((self.grasa_poli * 9.0) / self.calorias) * 100
 
-        # Calculamos la mejora en términos de porcentajes respecto a los hábitos base
-        # Bajar saturada y subir monoinsaturada y poliinsaturada es beneficioso
-        mejora_sat = self.pct_grasa_sat_base - pct_sat_actual
-        mejora_mono = pct_mono_actual - self.pct_grasa_mono_base
-        mejora_poli = pct_poli_actual - self.pct_grasa_poli_base
+        # 3. Calcular % de energía aportada por cada grasa en los HÁBITOS BASE (Escala 0-100)
+        S_base = (self.pct_grasa_sat_base * self.pct_grasa_base) * 100
+        M_base = (self.pct_grasa_mono_base * self.pct_grasa_base) * 100
+        P_base = (self.pct_grasa_poli_base * self.pct_grasa_base) * 100
 
-        # 3. Puntuamos la mejora de calidad de grasas como una puntuación entre 0 y 1
-        puntuacion_grasas = (mejora_sat * 1.5) + (mejora_mono * 1.0) + (mejora_poli * 0.3)
-        calidad_grasas = max(0.0, min(1.0, puntuacion_grasas / 0.06)) # Normalizamos entre 0 y 1
+        # 4. Calcular los incrementos/decrementos (Deltas)
+        delta_S = S_actual - S_base
+        delta_M = M_actual - M_base
+        delta_P = P_actual - P_base
+        delta_F = self.fibra_soluble - self.fibra_soluble_base
 
-        # 4. También tenemos en cuenta el déficit calórico (+déficit = +mejoría)
+        # 5. Calcular el déficit calórico
         deficit = self.calorias_base - self.calorias
-        factor_calorias = max(0.0, min(1.0, deficit / 700.0)) # Un déficit de 700 kcal da puntuación máxima (1.0)
 
-        # 5. Combinamos ambos factores para calcular la mejora total
-        mejora_total = (calidad_grasas * 0.75) + (factor_calorias * 0.25) # Damos más peso a la calidad de las grasas que al déficit calórico
+        # 6. Aplicar la Ecuación Matemática Completa --> ajuste de pesos 
+        # A) Efecto de la Dieta (Grasas + Fibra)
+        # Le damos mayor importancia a las grasas monoinsaturadas por el factor AOVE
+        cambio_ldl_grasas = (0.068 * delta_S) - (0.102 * delta_M) - (0.03 * delta_P) - (0.022 * delta_F)
+        
+        # B) Efecto de la pérdida de peso
+        # Calculamos un factor entre 0 y 1 (donde 1 representa alcanzar un déficit de 700 kcal).
+        # Establecemos que el beneficio máximo por adelgazar sea de -0.05 mmol/L.
+        factor_deficit = max(0.0, min(1.0, deficit / 700.0))
+        cambio_ldl_deficit = -0.05 * factor_deficit
+        
+        # 7. LDL Objetivo a largo plazo (Suma de los hábitos dietéticos + pérdida de peso)
+        ldl_objetivo = col_ldl_inicial + cambio_ldl_grasas + cambio_ldl_deficit
 
-        # 6. Establecemos un límite de reducción del colesterol LDL (máximo 13% de mejora respecto al valor inicial)
-        mejora_max_ldl = col_ldl_inicial * 0.13
-        ldl_objetivo = col_ldl_inicial - (mejora_total * mejora_max_ldl)
-
-        # 7. Función asíntotica (curva más pronunciada al principio y luego se estabiliza)
+        # 8. Función asintótica (curva de estabilización semanal)
         if ldl_objetivo < self.col_ldl:
-            # El paciente mejora rápido al principio y luego se estabiliza
+            # Si el paciente mejora, baja rápido al principio y luego se estabiliza
             k = 0.35
         else:
             # Si el paciente empeora, el aumento es más gradual

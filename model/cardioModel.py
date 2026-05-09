@@ -40,6 +40,7 @@ class CardioModel(mesa.Model):
                 pct_grasa_sat_base = max(0.01, np.random.normal(settings.GRASA_SAT_PCT_MEDIA_MED_INICIAL, settings.GRASA_SAT_PCT_STD_MED_INICIAL))
                 pct_grasa_mono_base = max(0.01, np.random.normal(settings.GRASA_MONO_PCT_MEDIA_MED_INICIAL, settings.GRASA_MONO_PCT_STD_MED_INICIAL))
                 pct_grasa_poli_base = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_MED_INICIAL, settings.GRASA_POLI_PCT_STD_MED_INICIAL)) 
+                fibra_soluble_base = max(0, np.random.normal(settings.FIBRA_SOLUBLE_MEDIA_MED_INICIAL, settings.FIBRA_SOLUBLE_STD_MED_INICIAL))
 
 
                 # OBJETIVOS DE LA DIETA MEDITERRÁNEA
@@ -51,6 +52,8 @@ class CardioModel(mesa.Model):
                 pct_grasa_sat = max(0.01, np.random.normal(settings.GRASA_SAT_PCT_MEDIA_MED, settings.GRASA_SAT_PCT_STD_MED))
                 pct_grasa_mono = max(0.01, np.random.normal(settings.GRASA_MONO_PCT_MEDIA_MED, settings.GRASA_MONO_PCT_STD_MED))
                 pct_grasa_poli = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_MED, settings.GRASA_POLI_PCT_STD_MED))
+                mean_change_fibra_soluble = np.random.normal(settings.MEAN_CHANGE_FIBRA_SOLUBLE_MED, 0.025)
+                fibra_soluble = max(0, fibra_soluble_base + mean_change_fibra_soluble)
 
                 # Variables de salud iniciales basadas en Campana de Gauss
                 col_total = np.random.normal(settings.COL_TOTAL_MEDIA_MED, settings.COL_TOTAL_STD_MED)
@@ -75,6 +78,7 @@ class CardioModel(mesa.Model):
                 pct_grasa_sat_base = max(0.01, np.random.normal(settings.GRASA_SAT_PCT_MEDIA_LOW_FAT_INICIAL, settings.GRASA_SAT_PCT_STD_LOW_FAT_INICIAL))
                 pct_grasa_mono_base = max(0.01, np.random.normal(settings.GRASA_MONO_PCT_MEDIA_LOW_FAT_INICIAL, settings.GRASA_MONO_PCT_STD_LOW_FAT_INICIAL))
                 pct_grasa_poli_base = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_LOW_FAT_INICIAL, settings.GRASA_POLI_PCT_STD_LOW_FAT_INICIAL))
+                fibra_soluble_base = max(0, np.random.normal(settings.FIBRA_SOLUBLE_MEDIA_LOW_FAT_INICIAL, settings.FIBRA_SOLUBLE_STD_LOW_FAT_INICIAL))
 
                 # OBJETIVOS DE LA DIETA BAJA EN GRASAS
                 deficit_low_fat = max(100, np.random.normal(settings.DEFICIT_MEDIA_LOW_FAT, 100))
@@ -85,6 +89,8 @@ class CardioModel(mesa.Model):
                 pct_grasa_sat = max(0.01, np.random.normal(settings.GRASA_SAT_PCT_MEDIA_LOW_FAT, settings.GRASA_SAT_PCT_STD_LOW_FAT))
                 pct_grasa_mono = max(0.01, np.random.normal(settings.GRASA_MONO_PCT_MEDIA_LOW_FAT, settings.GRASA_MONO_PCT_STD_LOW_FAT))
                 pct_grasa_poli = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_LOW_FAT, settings.GRASA_POLI_PCT_STD_LOW_FAT))
+                mean_change_fibra_soluble = np.random.normal(settings.MEAN_CHANGE_FIBRA_SOLUBLE_LOW_FAT, 0.025)
+                fibra_soluble = max(0, fibra_soluble_base + mean_change_fibra_soluble)
 
                 # Variables de salud iniciales basadas en Campana de Gauss
                 col_total = np.random.normal(settings.COL_TOTAL_MEDIA_LOW_FAT, settings.COL_TOTAL_STD_LOW_FAT)
@@ -93,8 +99,8 @@ class CardioModel(mesa.Model):
 
             # Instanciar el agente Paciente con sus características
             paciente = Paciente(i, self, grupo, es_mujer, edad, abandona, semana_abandono,
-                                calorias_base, pct_prot_base, pct_carb_base, pct_grasa_base, pct_grasa_sat_base, pct_grasa_mono_base, pct_grasa_poli_base,
-                                calorias, pct_prot, pct_carb, pct_grasa, pct_grasa_sat, pct_grasa_mono, pct_grasa_poli,
+                                calorias_base, pct_prot_base, pct_carb_base, pct_grasa_base, pct_grasa_sat_base, pct_grasa_mono_base, pct_grasa_poli_base, fibra_soluble_base,
+                                calorias, pct_prot, pct_carb, pct_grasa, pct_grasa_sat, pct_grasa_mono, pct_grasa_poli, fibra_soluble,
                                 col_total, col_ldl)
             self.schedule.add(paciente)
 
@@ -111,6 +117,9 @@ class CardioModel(mesa.Model):
                 "Grasa_Mono_g": "grasa_mono",
                 "Grasa_Poli_g": "grasa_poli",
                 "Otras_Grasas_g": "otras_grasas",
+                "Fibra_Soluble_g": "fibra_soluble",
+                "Fibra_Soluble_Objetivo_g": "fibra_soluble_objetivo",
+                "Fibra_Soluble_Base_g": "fibra_soluble_base",
                 "Colesterol_LDL": "col_ldl"
             }
         )
