@@ -133,3 +133,4 @@ class CardioModel(mesa.Model):
         self.schedule.step()
         self.datacollector.collect(self)
         self.current_step += 1
+        

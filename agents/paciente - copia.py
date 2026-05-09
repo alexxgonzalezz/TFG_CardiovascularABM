@@ -106,49 +106,43 @@ class Paciente(mesa.Agent):
 
 
     def actualizar_biomarcadores(self):
-        '''Función para actualizar el colesterol LDL en función de la dieta y el déficit calórico'''
+        '''Función para actualizar los biomarcadores de salud del paciente en función de su ingesta real'''
         
         # 1. Guardamos el colesterol LDL con el que parte el paciente
         if not hasattr(self, 'col_ldl_base'):
             self.col_ldl_base = self.col_ldl
+        # Usamos nueva variable para no cambiar valor
         col_ldl_inicial = self.col_ldl_base
 
-        # 2. Calcular % de energía aportada por cada grasa ACTUALMENTE (Escala 0-100)
-        S_actual = ((self.grasa_sat * 9.0) / self.calorias) * 100
-        M_actual = ((self.grasa_mono * 9.0) / self.calorias) * 100
-        P_actual = ((self.grasa_poli * 9.0) / self.calorias) * 100
+        # 2. Comparar porcentajes de energía de grasas (Ingesta actual vs Hábitos base)
+        pct_sat_actual = (self.grasa_sat * 9.0) / self.calorias
+        pct_mono_actual = (self.grasa_mono * 9.0) / self.calorias
+        pct_poli_actual = (self.grasa_poli * 9.0) / self.calorias
 
-        # 3. Calcular % de energía aportada por cada grasa en los HÁBITOS BASE (Escala 0-100)
-        S_base = (self.pct_grasa_sat_base * self.pct_grasa_base) * 100
-        M_base = (self.pct_grasa_mono_base * self.pct_grasa_base) * 100
-        P_base = (self.pct_grasa_poli_base * self.pct_grasa_base) * 100
+        # Calculamos la mejora en términos de porcentajes respecto a los hábitos base
+        # Bajar saturada y subir monoinsaturada y poliinsaturada es beneficioso
+        mejora_sat = self.pct_grasa_sat_base - pct_sat_actual
+        mejora_mono = pct_mono_actual - self.pct_grasa_mono_base
+        mejora_poli = pct_poli_actual - self.pct_grasa_poli_base
 
-        # 4. Calcular los incrementos/decrementos (Deltas)
-        delta_S = S_actual - S_base
-        delta_M = M_actual - M_base
-        delta_P = P_actual - P_base
-        delta_F = self.fibra_soluble - self.fibra_soluble_base
+        # 3. Puntuamos la mejora de calidad de grasas como una puntuación entre 0 y 1
+        puntuacion_grasas = (mejora_sat * 1.5) + (mejora_mono * 1.0) + (mejora_poli * 0.3)
+        calidad_grasas = max(0.0, min(1.0, puntuacion_grasas / 0.2)) # Normalizamos entre 0 y 1
 
-        # 5. Calcular el déficit calórico
+        # 4. También tenemos en cuenta el déficit calórico (+déficit = +mejoría)
         deficit = self.calorias_base - self.calorias
+        factor_calorias = max(0.0, min(1.0, deficit / 700.0)) # Un déficit de 700 kcal da puntuación máxima (1.0)
 
-        # 6. Aplicar la Ecuación Matemática Completa --> ajuste de pesos 
-        # A) Efecto de la Dieta (Grasas + Fibra)
-        # Le damos mayor importancia a las grasas monoinsaturadas por el factor AOVE
-        cambio_ldl_grasas = (0.068 * delta_S) - (0.102 * delta_M) - (0.03 * delta_P) - (0.022 * delta_F)
-        
-        # B) Efecto de la pérdida de peso
-        # Calculamos un factor entre 0 y 1 (donde 1 representa alcanzar un déficit de 700 kcal).
-        # Establecemos que el beneficio máximo por adelgazar sea de -0.05 mmol/L.
-        factor_deficit = max(0.0, min(1.0, deficit / 700.0))
-        cambio_ldl_deficit = -0.05 * factor_deficit
-        
-        # 7. LDL Objetivo a largo plazo (Suma de los hábitos dietéticos + pérdida de peso)
-        ldl_objetivo = col_ldl_inicial + cambio_ldl_grasas + cambio_ldl_deficit
+        # 5. Combinamos ambos factores para calcular la mejora total
+        mejora_total = (calidad_grasas * 0.75) + (factor_calorias * 0.25) # Damos más peso a la calidad de las grasas que al déficit calórico
 
-        # 8. Función asintótica (curva de estabilización semanal)
+        # 6. Establecemos un límite de reducción del colesterol LDL (máximo 13% de mejora respecto al valor inicial)
+        mejora_max_ldl = col_ldl_inicial * 0.13
+        ldl_objetivo = col_ldl_inicial - (mejora_total * mejora_max_ldl)
+
+        # 7. Función asíntotica (curva más pronunciada al principio y luego se estabiliza)
         if ldl_objetivo < self.col_ldl:
-            # Si el paciente mejora, baja rápido al principio y luego se estabiliza
+            # El paciente mejora rápido al principio y luego se estabiliza
             k = 0.35
         else:
             # Si el paciente empeora, el aumento es más gradual
@@ -165,4 +159,3 @@ class Paciente(mesa.Agent):
 
         # Actualizar los biomarcadores de salud en función de la ingesta 
         self.actualizar_biomarcadores()
-        
