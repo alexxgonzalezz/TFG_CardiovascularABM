@@ -41,6 +41,7 @@ class CardioModel(mesa.Model):
                 pct_grasa_mono_base = max(0.01, np.random.normal(settings.GRASA_MONO_PCT_MEDIA_MED_INICIAL, settings.GRASA_MONO_PCT_STD_MED_INICIAL))
                 pct_grasa_poli_base = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_MED_INICIAL, settings.GRASA_POLI_PCT_STD_MED_INICIAL)) 
                 fibra_soluble_base = max(0, np.random.normal(settings.FIBRA_SOLUBLE_MEDIA_MED_INICIAL, settings.FIBRA_SOLUBLE_STD_MED_INICIAL))
+                col_dietetico_base = max(0, np.random.normal(settings.COL_DIETETICO_MEDIA_MED_INICIAL, settings.COL_DIETETICO_STD_MED_INICIAL))
 
 
                 # OBJETIVOS DE LA DIETA MEDITERRÁNEA
@@ -54,14 +55,17 @@ class CardioModel(mesa.Model):
                 pct_grasa_poli = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_MED, settings.GRASA_POLI_PCT_STD_MED))
                 mean_change_fibra_soluble = np.random.normal(settings.MEAN_CHANGE_FIBRA_SOLUBLE_MED, 0.025)
                 fibra_soluble = max(0, fibra_soluble_base + mean_change_fibra_soluble)
+                mean_change_col_dietetico = np.random.normal(settings.MEAN_CHANGE_COL_DIETETICO_MED, 0.025)
+                col_dietetico = max(0, col_dietetico_base + mean_change_col_dietetico)
 
                 # Variables de salud iniciales basadas en Campana de Gauss
                 col_total = np.random.normal(settings.COL_TOTAL_MEDIA_MED, settings.COL_TOTAL_STD_MED)
                 col_ldl = np.random.normal(settings.COL_LDL_MEDIA_MED, settings.COL_LDL_STD_MED)
+                insulina = np.random.normal(settings.INSULINA_MEDIA_MED, settings.INSULINA_STD_MED)
 
 
             # Grupo dieta baja en grasas
-            else:
+            elif i < int((settings.PROPORCION_MED + settings.PROPORCION_LOW_FAT) * self.num_pacientes):
                 grupo = 'Baja en Grasas'
                 es_mujer = random.random() < settings.PROPORCION_MUJERES_LOW_FAT
                 edad = max(18, int(np.random.normal(settings.EDAD_MEDIA, settings.EDAD_STD)))
@@ -79,6 +83,7 @@ class CardioModel(mesa.Model):
                 pct_grasa_mono_base = max(0.01, np.random.normal(settings.GRASA_MONO_PCT_MEDIA_LOW_FAT_INICIAL, settings.GRASA_MONO_PCT_STD_LOW_FAT_INICIAL))
                 pct_grasa_poli_base = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_LOW_FAT_INICIAL, settings.GRASA_POLI_PCT_STD_LOW_FAT_INICIAL))
                 fibra_soluble_base = max(0, np.random.normal(settings.FIBRA_SOLUBLE_MEDIA_LOW_FAT_INICIAL, settings.FIBRA_SOLUBLE_STD_LOW_FAT_INICIAL))
+                col_dietetico_base = max(0, np.random.normal(settings.COL_DIETETICO_MEDIA_LOW_FAT_INICIAL, settings.COL_DIETETICO_STD_LOW_FAT_INICIAL))
 
                 # OBJETIVOS DE LA DIETA BAJA EN GRASAS
                 deficit_low_fat = max(100, np.random.normal(settings.DEFICIT_MEDIA_LOW_FAT, 100))
@@ -91,46 +96,122 @@ class CardioModel(mesa.Model):
                 pct_grasa_poli = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_LOW_FAT, settings.GRASA_POLI_PCT_STD_LOW_FAT))
                 mean_change_fibra_soluble = np.random.normal(settings.MEAN_CHANGE_FIBRA_SOLUBLE_LOW_FAT, 0.025)
                 fibra_soluble = max(0, fibra_soluble_base + mean_change_fibra_soluble)
+                mean_change_col_dietetico = np.random.normal(settings.MEAN_CHANGE_COL_DIETETICO_LOW_FAT, 0.025)
+                col_dietetico = max(0, col_dietetico_base + mean_change_col_dietetico)
 
                 # Variables de salud iniciales basadas en Campana de Gauss
                 col_total = np.random.normal(settings.COL_TOTAL_MEDIA_LOW_FAT, settings.COL_TOTAL_STD_LOW_FAT)
                 col_ldl = np.random.normal(settings.COL_LDL_MEDIA_LOW_FAT, settings.COL_LDL_STD_LOW_FAT)
+                insulina = np.random.normal(settings.INSULINA_MEDIA_LOW_FAT, settings.INSULINA_STD_LOW_FAT)
 
+
+            # Grupo dieta keto
+            elif i < int((settings.PROPORCION_MED + settings.PROPORCION_LOW_FAT + settings.PROPORCION_KETO) * self.num_pacientes):
+                grupo = 'Keto'
+                es_mujer = self.random.choice([True, False])
+                edad = max(18, int(np.random.normal(settings.EDAD_MEDIA, settings.EDAD_STD)))
+
+                # ¿Abandona la dieta?
+                abandona = False
+                semana_abandono = None
+
+                # HÁBITOS BASE (Lo que comía antes de empezar la dieta)
+                calorias_base = max(1200, np.random.normal(settings.ENERGIA_MEDIA_KETO_INICIAL, settings.ENERGIA_STD_KETO_INICIAL))
+                pct_prot_base = np.random.normal(settings.PROT_PCT_MEDIA_KETO_INICIAL, settings.PROT_PCT_STD_KETO_INICIAL)
+                pct_carb_base = np.random.normal(settings.CARB_PCT_MEDIA_KETO_INICIAL, settings.CARB_PCT_STD_KETO_INICIAL)
+                pct_grasa_base = np.random.normal(settings.GRASA_PCT_MEDIA_KETO_INICIAL, settings.GRASA_PCT_STD_KETO_INICIAL)
+                pct_grasa_sat_base = max(0.01, np.random.normal(settings.GRASA_SAT_PCT_MEDIA_KETO_INICIAL, settings.GRASA_SAT_PCT_STD_KETO_INICIAL))
+                pct_grasa_mono_base = max(0.01, np.random.normal(settings.GRASA_MONO_PCT_MEDIA_KETO_INICIAL, settings.GRASA_MONO_PCT_STD_KETO_INICIAL))
+                pct_grasa_poli_base = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_KETO_INICIAL, settings.GRASA_POLI_PCT_STD_KETO_INICIAL))
+                fibra_soluble_base = max(0, np.random.normal(settings.FIBRA_SOLUBLE_MEDIA_KETO_INICIAL, settings.FIBRA_SOLUBLE_STD_KETO_INICIAL))
+                col_dietetico_base = max(0, np.random.normal(settings.COL_DIETETICO_MEDIA_KETO_INICIAL, settings.COL_DIETETICO_STD_KETO_INICIAL))
+
+                # OBJETIVOS DE LA DIETA KETO
+                deficit_keto = max(100, np.random.normal(settings.DEFICIT_MEDIA_KETO, 100))
+                calorias = max(1000, (calorias_base - deficit_keto))
+                pct_prot = np.random.normal(settings.PROT_PCT_MEDIA_KETO, settings.PROT_PCT_STD_KETO)
+                pct_carb = np.random.normal(settings.CARB_PCT_MEDIA_KETO, settings.CARB_PCT_STD_KETO)
+                pct_grasa = np.random.normal(settings.GRASA_PCT_MEDIA_KETO, settings.GRASA_PCT_STD_KETO)
+                pct_grasa_sat = max(0.01, np.random.normal(settings.GRASA_SAT_PCT_MEDIA_KETO, settings.GRASA_SAT_PCT_STD_KETO))
+                pct_grasa_mono = max(0.01, np.random.normal(settings.GRASA_MONO_PCT_MEDIA_KETO, settings.GRASA_MONO_PCT_STD_KETO))
+                pct_grasa_poli = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_KETO, settings.GRASA_POLI_PCT_STD_KETO))
+                mean_change_fibra_soluble = np.random.normal(settings.MEAN_CHANGE_FIBRA_SOLUBLE_KETO, 0.025)
+                fibra_soluble = max(0, fibra_soluble_base + mean_change_fibra_soluble)
+                mean_change_col_dietetico = np.random.normal(settings.MEAN_CHANGE_COL_DIETETICO_KETO, 0.025)
+                col_dietetico = max(0, col_dietetico_base + mean_change_col_dietetico)
+
+                # Variables de salud iniciales basadas en Campana de Gauss
+                col_total = np.random.normal(settings.COL_TOTAL_MEDIA_KETO, settings.COL_TOTAL_STD_KETO)
+                col_ldl = np.random.normal(settings.COL_LDL_MEDIA_KETO, settings.COL_LDL_STD_KETO)
+                insulina = np.random.normal(settings.INSULINA_MEDIA_KETO, settings.INSULINA_STD_KETO)
+
+            else:
+                grupo = 'Vegetariana'
+                es_mujer = self.random.choice([True, False])
+                edad = max(18, int(np.random.normal(settings.EDAD_MEDIA, settings.EDAD_STD)))
+
+                # ¿Abandona la dieta?
+                abandona = False
+                semana_abandono = None
+
+                # HÁBITOS BASE (Lo que comía antes de empezar la dieta)
+                calorias_base = max(1200, np.random.normal(settings.ENERGIA_MEDIA_VEGETARIANA_INICIAL, settings.ENERGIA_STD_VEGETARIANA_INICIAL))
+                pct_prot_base = np.random.normal(settings.PROT_PCT_MEDIA_VEGETARIANA_INICIAL, settings.PROT_PCT_STD_VEGETARIANA_INICIAL)
+                pct_carb_base = np.random.normal(settings.CARB_PCT_MEDIA_VEGETARIANA_INICIAL, settings.CARB_PCT_STD_VEGETARIANA_INICIAL)
+                pct_grasa_base = np.random.normal(settings.GRASA_PCT_MEDIA_VEGETARIANA_INICIAL, settings.GRASA_PCT_STD_VEGETARIANA_INICIAL)
+                pct_grasa_sat_base = max(0.01, np.random.normal(settings.GRASA_SAT_PCT_MEDIA_VEGETARIANA_INICIAL, settings.GRASA_SAT_PCT_STD_VEGETARIANA_INICIAL))
+                pct_grasa_mono_base = max(0.01, np.random.normal(settings.GRASA_MONO_PCT_MEDIA_VEGETARIANA_INICIAL, settings.GRASA_MONO_PCT_STD_VEGETARIANA_INICIAL))
+                pct_grasa_poli_base = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_VEGETARIANA_INICIAL, settings.GRASA_POLI_PCT_STD_VEGETARIANA_INICIAL))
+                fibra_soluble_base = max(0, np.random.normal(settings.FIBRA_SOLUBLE_MEDIA_VEGETARIANA_INICIAL, settings.FIBRA_SOLUBLE_STD_VEGETARIANA_INICIAL))
+                col_dietetico_base = max(0, np.random.normal(settings.COL_DIETETICO_MEDIA_VEGETARIANA_INICIAL, settings.COL_DIETETICO_STD_VEGETARIANA_INICIAL))
+
+                # OBJETIVOS DE LA DIETA VEGETARIANA
+                deficit_vegetariana = max(100, np.random.normal(settings.DEFICIT_MEDIA_VEGETARIANA, 100))
+                calorias = max(1000, (calorias_base - deficit_vegetariana))
+                pct_prot = np.random.normal(settings.PROT_PCT_MEDIA_VEGETARIANA, settings.PROT_PCT_STD_VEGETARIANA)
+                pct_carb = np.random.normal(settings.CARB_PCT_MEDIA_VEGETARIANA, settings.CARB_PCT_STD_VEGETARIANA)
+                pct_grasa = np.random.normal(settings.GRASA_PCT_MEDIA_VEGETARIANA, settings.GRASA_PCT_STD_VEGETARIANA)
+                pct_grasa_sat = max(0.01, np.random.normal(settings.GRASA_SAT_PCT_MEDIA_VEGETARIANA, settings.GRASA_SAT_PCT_STD_VEGETARIANA))
+                pct_grasa_mono = max(0.01, np.random.normal(settings.GRASA_MONO_PCT_MEDIA_VEGETARIANA, settings.GRASA_MONO_PCT_STD_VEGETARIANA))
+                pct_grasa_poli = max(0.01, np.random.normal(settings.GRASA_POLI_PCT_MEDIA_VEGETARIANA, settings.GRASA_POLI_PCT_STD_VEGETARIANA))
+                mean_change_fibra_soluble = np.random.normal(settings.MEAN_CHANGE_FIBRA_SOLUBLE_VEGETARIANA, 0.025)
+                fibra_soluble = max(0, fibra_soluble_base + mean_change_fibra_soluble)
+                mean_change_col_dietetico = np.random.normal(settings.MEAN_CHANGE_COL_DIETETICO_VEGETARIANA, 0.025)
+                col_dietetico = max(0, col_dietetico_base + mean_change_col_dietetico)
 
             # Instanciar el agente Paciente con sus características
             paciente = Paciente(i, self, grupo, es_mujer, edad, abandona, semana_abandono,
-                                calorias_base, pct_prot_base, pct_carb_base, pct_grasa_base, pct_grasa_sat_base, pct_grasa_mono_base, pct_grasa_poli_base, fibra_soluble_base,
-                                calorias, pct_prot, pct_carb, pct_grasa, pct_grasa_sat, pct_grasa_mono, pct_grasa_poli, fibra_soluble,
-                                col_total, col_ldl)
+                                calorias_base, pct_prot_base, pct_carb_base, pct_grasa_base, pct_grasa_sat_base, pct_grasa_mono_base, pct_grasa_poli_base, fibra_soluble_base, col_dietetico_base,
+                                calorias, pct_prot, pct_carb, pct_grasa, pct_grasa_sat, pct_grasa_mono, pct_grasa_poli, fibra_soluble, col_dietetico,
+                                col_total, col_ldl, insulina)
             self.schedule.add(paciente)
 
         # Inicializar DataCollector
         self.datacollector = mesa.DataCollector(
             agent_reporters={
-                "Grupo": "grupo",
-                "Estado": "estado_actual",
+                "Dieta": "grupo",
+                "Estado Actual": "estado_actual",
                 "Calorías": "calorias",
                 "Proteínas": "proteinas",
                 "Carbohidratos": "carbohidratos",
-                "Grasa_Total_g": "grasas",
-                "Grasa_Sat_g": "grasa_sat",
-                "Grasa_Mono_g": "grasa_mono",
-                "Grasa_Poli_g": "grasa_poli",
-                "Otras_Grasas_g": "otras_grasas",
-                "Fibra_Soluble_g": "fibra_soluble",
-                "Fibra_Soluble_Objetivo_g": "fibra_soluble_objetivo",
-                "Fibra_Soluble_Base_g": "fibra_soluble_base",
-                "Colesterol_LDL": "col_ldl"
+                "Grasas Totales": "grasas",
+                "Saturadas": "grasa_sat",
+                "Monoinsaturadas": "grasa_mono",
+                "Poliinsaturadas": "grasa_poli",
+                "Otras grasas": "otras_grasas",
+                "Fibra Soluble": "fibra_soluble",
+                "Colesterol Dietético": "col_dietetico",
+                "Colesterol Total": "col_total",
+                "Colesterol LDL": "col_ldl",
+                "Insulina": "insulina"
             }
         )
 
-        # Recolectar el colesterol ldl del "Día 0"
+        # Recolectar los biomarcadores del "Día 0"
         self.datacollector.collect(self)
     
     def step(self):
         '''Función que se ejecuta en cada paso de la simulación.'''
-        # print(f"\n--- Iniciando Semana {self.current_step} ---")
         self.schedule.step()
         self.datacollector.collect(self)
         self.current_step += 1
-        
