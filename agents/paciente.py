@@ -5,9 +5,9 @@ class Paciente(mesa.Agent):
     '''Agente que representa a un paciente con factores de riesgo cardiovascular.'''
 
     def __init__(self, unique_id, model, grupo, es_mujer, edad, abandona, semana_abandono,
-                 calorias_base, pct_prot_base, pct_carb_base, pct_grasa_base, pct_grasa_sat_base, pct_grasa_mono_base, pct_grasa_poli_base, fibra_soluble_base,
-                 calorias, pct_prot, pct_carb, pct_grasa, pct_grasa_sat, pct_grasa_mono, pct_grasa_poli, fibra_soluble,
-                 col_total, col_ldl):
+                 calorias_base, pct_prot_base, pct_carb_base, pct_grasa_base, pct_grasa_sat_base, pct_grasa_mono_base, pct_grasa_poli_base, fibra_soluble_base, col_dietetico_base,
+                 calorias, pct_prot, pct_carb, pct_grasa, pct_grasa_sat, pct_grasa_mono, pct_grasa_poli, fibra_soluble, col_dietetico,
+                 col_total, col_ldl, insulina):
         super().__init__(model)
 
         # Perfil del paciente
@@ -29,8 +29,9 @@ class Paciente(mesa.Agent):
         self.pct_grasa_mono_base = pct_grasa_mono_base
         self.pct_grasa_poli_base = pct_grasa_poli_base
         self.fibra_soluble_base = fibra_soluble_base
+        self.col_dietetico_base = col_dietetico_base
 
-        # Calorías (kcal) y macronuientes esenciales OBJETIVO (PORCENTAJES)
+        # Calorías (kcal) y macronutrientes esenciales OBJETIVO (PORCENTAJES)
         self.calorias_objetivo = calorias
         self.pct_prot_objetivo = pct_prot
         self.pct_carb_objetivo = pct_carb
@@ -39,10 +40,12 @@ class Paciente(mesa.Agent):
         self.pct_grasa_mono_objetivo = pct_grasa_mono
         self.pct_grasa_poli_objetivo = pct_grasa_poli
         self.fibra_soluble_objetivo = fibra_soluble
+        self.col_dietetico_objetivo = col_dietetico
 
         # Variables de salud iniciales
         self.col_total = col_total
         self.col_ldl = col_ldl
+        self.insulina = insulina
 
     def comer(self):
         '''Simula la ingesta semanal del paciente'''
@@ -61,15 +64,17 @@ class Paciente(mesa.Agent):
             self.pct_grasa_mono_objetivo = self.pct_grasa_mono_base
             self.pct_grasa_poli_objetivo = self.pct_grasa_poli_base
             self.fibra_soluble_objetivo = self.fibra_soluble_base
+            self.col_dietetico_objetivo = self.col_dietetico_base
             estado = "ABANDONO"
 
         else:
             # El paciente sigue con su dieta asignada
             estado = "ACTIVO"
 
-        # 1. Calorías reales consumidas cada semana (con variabilidad)
+        # 1. Calorías reales consumidas cada semana + fibra soluble + colesterol dietético (con variabilidad)
         self.calorias = max(1000, np.random.normal(self.calorias_objetivo, self.calorias_objetivo * VARIABILIDAD_SEMANAL))
         self.fibra_soluble = max(0, np.random.normal(self.fibra_soluble_objetivo, self.fibra_soluble_objetivo * VARIABILIDAD_SEMANAL))
+        self.col_dietetico = max(0, np.random.normal(self.col_dietetico_objetivo, self.col_dietetico_objetivo * VARIABILIDAD_SEMANAL))
 
         # 2. Aplicar variabilidad a los porcentajes de macronutrientes objetivo
         proteinas_pct = max(0.01, np.random.normal(self.pct_prot_objetivo, self.pct_prot_objetivo * VARIABILIDAD_SEMANAL))
@@ -102,59 +107,133 @@ class Paciente(mesa.Agent):
 
         self.estado_actual = estado
 
-        return estado # Devuelve el estado del paciente (activo o abandono)
+        # Devolvemos el estado actual del paciente (ACTIVO o ABANDONO)
+        return estado
 
+    def actualizar_colesterol_total(self):
+        '''Función para actualizar el colesterol total en función de la dieta'''
 
-    def actualizar_biomarcadores(self):
-        '''Función para actualizar el colesterol LDL en función de la dieta y el déficit calórico'''
-        
-        # 1. Guardamos el colesterol LDL con el que parte el paciente
-        if not hasattr(self, 'col_ldl_base'):
-            self.col_ldl_base = self.col_ldl
-        col_ldl_inicial = self.col_ldl_base
+        # 1. Guardamos el colesterol total con el que parte el paciente
+        if not hasattr(self, 'col_total_base'):
+            self.col_total_base = self.col_total
 
-        # 2. Calcular % de energía aportada por cada grasa ACTUALMENTE (Escala 0-100)
-        S_actual = ((self.grasa_sat * 9.0) / self.calorias) * 100
-        M_actual = ((self.grasa_mono * 9.0) / self.calorias) * 100
-        P_actual = ((self.grasa_poli * 9.0) / self.calorias) * 100
+        col_total_inicial = self.col_total_base
 
-        # 3. Calcular % de energía aportada por cada grasa en los HÁBITOS BASE (Escala 0-100)
+        # 2. Calcular % de energía aportada por cada grasa durante la DIETA
+        S_dieta = ((self.grasa_sat * 9.0) / self.calorias) * 100
+        M_dieta = ((self.grasa_mono * 9.0) / self.calorias) * 100
+        P_dieta = ((self.grasa_poli * 9.0) / self.calorias) * 100
+
+        # 3. Calcular % de energía aportada por cada grasa en los HÁBITOS BASE
         S_base = (self.pct_grasa_sat_base * self.pct_grasa_base) * 100
         M_base = (self.pct_grasa_mono_base * self.pct_grasa_base) * 100
         P_base = (self.pct_grasa_poli_base * self.pct_grasa_base) * 100
 
-        # 4. Calcular los incrementos/decrementos (Deltas)
-        delta_S = S_actual - S_base
-        delta_M = M_actual - M_base
-        delta_P = P_actual - P_base
+        # 4. Calcular los incrementos/decrementos (deltas)
+        # 4.1 Tipos de grasa
+        delta_S = S_dieta - S_base
+        delta_M = M_dieta - M_base
+        delta_P = P_dieta - P_base
+
+        # 4.2 Añadimos el efecto de la fibra soluble
         delta_F = self.fibra_soluble - self.fibra_soluble_base
 
-        # 5. Calcular el déficit calórico
+        # 4.3 Añadimos el efecto del colesterol dietético
+        c_inicial = (self.col_dietetico_base / self.calorias_base) * 1000  # mg de colesterol por 1000 kcal en los hábitos base
+        c_dieta = (self.col_dietetico / self.calorias) * 1000  # mg de colesterol por 1000 kcal en la dieta
+
+        # 4.4 Añadimos el efecto del déficit calórico
         deficit = self.calorias_base - self.calorias
 
-        # 6. Aplicar la Ecuación Matemática Completa --> ajuste de pesos 
-        # A) Efecto de la Dieta (Grasas + Fibra)
-        # Le damos mayor importancia a las grasas monoinsaturadas por el factor AOVE
-        cambio_ldl_grasas = (0.068 * delta_S) - (0.102 * delta_M) - (0.03 * delta_P) - (0.022 * delta_F)
-        
-        # B) Efecto de la pérdida de peso
-        # Calculamos un factor entre 0 y 1 (donde 1 representa alcanzar un déficit de 700 kcal).
-        # Establecemos que el beneficio máximo por adelgazar sea de -0.05 mmol/L.
-        factor_deficit = max(0.0, min(1.0, deficit / 700.0))
-        cambio_ldl_deficit = -0.05 * factor_deficit
-        
-        # 7. LDL Objetivo a largo plazo (Suma de los hábitos dietéticos + pérdida de peso)
-        ldl_objetivo = col_ldl_inicial + cambio_ldl_grasas + cambio_ldl_deficit
+        # 5. Aplicar ecuación matemática para bajada de Colesterol Total
+        # 5.1 Efecto de los tipos de grasa (Mensink and Katan, 2003)
+        cambio_ct_mgdl = 1.2 * (1.8 * delta_S - 0.1 * delta_M - 0.5 * delta_P)
+        cambio_ct_grasas = cambio_ct_mgdl / 38.67  # Convertir de mg/dL a mmol/L
 
-        # 8. Función asintótica (curva de estabilización semanal)
-        if ldl_objetivo < self.col_ldl:
-            # Si el paciente mejora, baja rápido al principio y luego se estabiliza
-            k = 0.35
+        # 5.2 Efecto de la fibra soluble (0.045 mmol/L por cada gramo adicional de fibra soluble)
+        cambio_ct_fibra = -0.045 * delta_F
+
+        # 5.3 Efecto del colesterol dietético (Ecuación de Keys)
+        cambio_ct_colesterol = 1.5 * (np.sqrt(c_dieta) - np.sqrt(c_inicial)) / 38.67  # Convertir de mg/dL a mmol/L
+
+        # 5.4 Efecto del déficit calórico
+        cambio_ct_deficit = -0.08 * (deficit / 700.0)  # Beneficio máximo de -0.08 mmol/L por alcanzar un déficit de 700 kcal
+
+        # 6. Colesterol Total objetivo
+        col_total_objetivo = col_total_inicial + cambio_ct_grasas + cambio_ct_fibra + cambio_ct_colesterol + cambio_ct_deficit
+
+        if col_total_objetivo < self.col_total:
+            k = 0.35  # Si el paciente mejora, baja rápido al principio y luego se estabiliza
         else:
-            # Si el paciente empeora, el aumento es más gradual
-            k = 0.15
+            k = 0.15  # Si el paciente empeora, el aumento es más gradual
         
-        self.col_ldl = self.col_ldl + (ldl_objetivo - self.col_ldl) * k
+        self.col_total = self.col_total + (col_total_objetivo - self.col_total) * k
+
+
+    def actualizar_colesterol_ldl(self):
+        '''Función para actualizar el colesterol LDL en función de la dieta'''
+        
+        # 1. Guardamos el colesterol con el que parte el paciente
+        if not hasattr(self, 'col_ldl_base'):
+            self.col_ldl_base = self.col_ldl
+            
+        col_ldl_inicial = self.col_ldl_base
+
+        # 2. Calcular % de energía aportada por cada grasa durante la dieta
+        S_dieta = ((self.grasa_sat * 9.0) / self.calorias) * 100
+        M_dieta = ((self.grasa_mono * 9.0) / self.calorias) * 100
+        P_dieta = ((self.grasa_poli * 9.0) / self.calorias) * 100
+
+        # 3. Calcular % de energía aportada por cada grasa en los hábitos base
+        S_base = (self.pct_grasa_sat_base * self.pct_grasa_base) * 100
+        M_base = (self.pct_grasa_mono_base * self.pct_grasa_base) * 100
+        P_base = (self.pct_grasa_poli_base * self.pct_grasa_base) * 100
+
+        # 4. Calcular los incrementos/decrementos (deltas)
+        # 4.1 Tipos de grasa
+        delta_S = S_dieta - S_base
+        delta_M = M_dieta - M_base
+        delta_P = P_dieta - P_base
+
+        # 4.2 Añadimos el efecto de la fibra soluble
+        delta_F = self.fibra_soluble - self.fibra_soluble_base
+
+        # 4.3 Añadimos el efecto del colesterol dietético
+        delta_C = self.col_dietetico - self.col_dietetico_base
+
+        # 4.4 Añadimos el efecto del deficit calórico
+        deficit = self.calorias_base - self.calorias
+
+        # 5. Aplicar la ecuación matemática para bajada de Colesterol LDL
+        # 5.1 Efecto de los tipos de grasa (Mensink and Katan, 2003)
+        cambio_ldl_grasas = (0.036 * delta_S) - (0.009 * delta_M) - (0.022 * delta_P)
+
+        # 5.2 Efecto de la fibra soluble (0.057 mmol/L por cada gramo adicional de fibra soluble)
+        cambio_ldl_fibra = -0.057 * delta_F
+
+        # 5.3 Efecto del colesterol dietético (Weggemans et al., 2001)
+        cambio_ldl_colesterol = 0.012 * (delta_C / 100.0)
+
+        # 5.4 Efecto del déficit calórico
+        cambio_deficit = -0.08 * (deficit / 700.0)  # Beneficio máximo de -0.08 mmol/L por alcanzar un déficit de 700 kcal
+
+        # # 5.2 Aplicar la ecuación matemática con ajuste de pesos para bajada de Colesterol LDL
+        # # Le damos mayor importancia a las grasas monoinsaturadas por el factor AOVE
+        # # cambio_ldl_grasas = (0.068 * delta_S) - (0.089 * delta_M) - (0.045 * delta_P) - (0.033 * delta_F) --> LA DE LOS BUENOS RESULTADOS
+        # cambio_ldl_grasas = (0.036 * delta_S) - (0.009 * delta_M) - (0.022 * delta_P)
+
+        # 6. Colesterol Total y LDL objetivo
+        ldl_objetivo = col_ldl_inicial + cambio_ldl_grasas + cambio_ldl_fibra + cambio_ldl_colesterol + cambio_deficit
+
+        # 7. Función asintótica
+        # Si el paciente mejora, baja rápido al principio y luego se estabiliza
+        # Si el paciente empeora, el aumento es más gradual
+        if ldl_objetivo < self.col_ldl:
+            k_ldl = 0.35
+        else:
+            k_ldl = 0.15
+        
+        self.col_ldl = self.col_ldl + (ldl_objetivo - self.col_ldl) * k_ldl
 
 
     def step(self):
@@ -164,5 +243,5 @@ class Paciente(mesa.Agent):
         estado_paciente = self.comer()
 
         # Actualizar los biomarcadores de salud en función de la ingesta 
-        self.actualizar_biomarcadores()
-        
+        self.actualizar_colesterol_total()
+        self.actualizar_colesterol_ldl()
