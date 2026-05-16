@@ -61,7 +61,6 @@ class CardioModel(mesa.Model):
                 # Variables de salud iniciales basadas en Campana de Gauss
                 col_total = np.random.normal(settings.COL_TOTAL_MEDIA_MED, settings.COL_TOTAL_STD_MED)
                 col_ldl = np.random.normal(settings.COL_LDL_MEDIA_MED, settings.COL_LDL_STD_MED)
-                insulina = np.random.normal(settings.INSULINA_MEDIA_MED, settings.INSULINA_STD_MED)
 
 
             # Grupo dieta baja en grasas
@@ -102,7 +101,6 @@ class CardioModel(mesa.Model):
                 # Variables de salud iniciales basadas en Campana de Gauss
                 col_total = np.random.normal(settings.COL_TOTAL_MEDIA_LOW_FAT, settings.COL_TOTAL_STD_LOW_FAT)
                 col_ldl = np.random.normal(settings.COL_LDL_MEDIA_LOW_FAT, settings.COL_LDL_STD_LOW_FAT)
-                insulina = np.random.normal(settings.INSULINA_MEDIA_LOW_FAT, settings.INSULINA_STD_LOW_FAT)
 
 
             # Grupo dieta keto
@@ -143,7 +141,6 @@ class CardioModel(mesa.Model):
                 # Variables de salud iniciales basadas en Campana de Gauss
                 col_total = np.random.normal(settings.COL_TOTAL_MEDIA_KETO, settings.COL_TOTAL_STD_KETO)
                 col_ldl = np.random.normal(settings.COL_LDL_MEDIA_KETO, settings.COL_LDL_STD_KETO)
-                insulina = np.random.normal(settings.INSULINA_MEDIA_KETO, settings.INSULINA_STD_KETO)
 
             else:
                 grupo = 'Vegetariana'
@@ -183,7 +180,7 @@ class CardioModel(mesa.Model):
             paciente = Paciente(i, self, grupo, es_mujer, edad, abandona, semana_abandono,
                                 calorias_base, pct_prot_base, pct_carb_base, pct_grasa_base, pct_grasa_sat_base, pct_grasa_mono_base, pct_grasa_poli_base, fibra_soluble_base, col_dietetico_base,
                                 calorias, pct_prot, pct_carb, pct_grasa, pct_grasa_sat, pct_grasa_mono, pct_grasa_poli, fibra_soluble, col_dietetico,
-                                col_total, col_ldl, insulina)
+                                col_total, col_ldl)
             self.schedule.add(paciente)
 
         # Inicializar DataCollector
@@ -202,8 +199,7 @@ class CardioModel(mesa.Model):
                 "Fibra Soluble": "fibra_soluble",
                 "Colesterol Dietético": "col_dietetico",
                 "Colesterol Total": "col_total",
-                "Colesterol LDL": "col_ldl",
-                "Insulina": "insulina"
+                "Colesterol LDL": "col_ldl"
             }
         )
 
