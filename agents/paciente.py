@@ -7,7 +7,7 @@ class Paciente(mesa.Agent):
     def __init__(self, unique_id, model, grupo, es_mujer, edad, abandona, semana_abandono,
                  calorias_base, pct_prot_base, pct_carb_base, pct_grasa_base, pct_grasa_sat_base, pct_grasa_mono_base, pct_grasa_poli_base, fibra_soluble_base, col_dietetico_base,
                  calorias, pct_prot, pct_carb, pct_grasa, pct_grasa_sat, pct_grasa_mono, pct_grasa_poli, fibra_soluble, col_dietetico,
-                 col_total, col_ldl, insulina):
+                 col_total, col_ldl):
         super().__init__(model)
 
         # Perfil del paciente
@@ -45,7 +45,16 @@ class Paciente(mesa.Agent):
         # Variables de salud iniciales
         self.col_total = col_total
         self.col_ldl = col_ldl
-        self.insulina = insulina
+
+        # Sensibilidad genética a la dieta (ApoE y respondedores)
+        # El 80% son normo-respondedores, un ~10% hiper-respondedores y un ~10% hipo-respondedores
+        prob_sensibilidad = np.random.random()
+        if prob_sensibilidad < 0.1:
+            self.sensibilidad = 0.5  # Hipo-respondedor (respuesta débil)
+        elif prob_sensibilidad > 0.9:
+            self.sensibilidad = 1.5  # Hiper-respondedor (respuesta fuerte, ej. portadores de ApoE4)
+        else:
+            self.sensibilidad = 1.0  # Normo-respondedor promedio
 
     def comer(self):
         '''Simula la ingesta semanal del paciente'''
@@ -147,8 +156,7 @@ class Paciente(mesa.Agent):
 
         # 5. Aplicar ecuación matemática para bajada de Colesterol Total
         # 5.1 Efecto de los tipos de grasa (Mensink and Katan, 2003)
-        cambio_ct_mgdl = 1.2 * (1.8 * delta_S - 0.1 * delta_M - 0.5 * delta_P)
-        cambio_ct_grasas = cambio_ct_mgdl / 38.67  # Convertir de mg/dL a mmol/L
+        cambio_ct_grasas = (0.036 * delta_S) - (0.006 * delta_M) - (0.022 * delta_P)
 
         # 5.2 Efecto de la fibra soluble (0.045 mmol/L por cada gramo adicional de fibra soluble)
         cambio_ct_fibra = -0.045 * delta_F
@@ -162,12 +170,11 @@ class Paciente(mesa.Agent):
         # 6. Colesterol Total objetivo
         col_total_objetivo = col_total_inicial + cambio_ct_grasas + cambio_ct_fibra + cambio_ct_colesterol + cambio_ct_deficit
 
-        if col_total_objetivo < self.col_total:
-            k = 0.35  # Si el paciente mejora, baja rápido al principio y luego se estabiliza
-        else:
-            k = 0.15  # Si el paciente empeora, el aumento es más gradual
-        
-        self.col_total = self.col_total + (col_total_objetivo - self.col_total) * k
+        # 7. Decaimiento exponencial hacia el objetivo
+        semana_actual = self.model.current_step
+        tasa_aclaramiento = 0.12
+
+        self.col_total = col_total_objetivo + (self.col_total - col_total_objetivo) * np.exp(-tasa_aclaramiento * semana_actual)
 
 
     def actualizar_colesterol_ldl(self):
@@ -189,51 +196,53 @@ class Paciente(mesa.Agent):
         M_base = (self.pct_grasa_mono_base * self.pct_grasa_base) * 100
         P_base = (self.pct_grasa_poli_base * self.pct_grasa_base) * 100
 
-        # 4. Calcular los incrementos/decrementos (deltas)
-        # 4.1 Tipos de grasa
+        # 4. CÁLCULO DE LOS EFECTOS
+        # 4.1 Efecto de los tipos de grasa (Mensink and Katan, 2003)
+        # Incrementos / decrementos de tipo de grasas respecto a los hábitos base (en % de energía)
         delta_S = S_dieta - S_base
         delta_M = M_dieta - M_base
         delta_P = P_dieta - P_base
 
-        # 4.2 Añadimos el efecto de la fibra soluble
+        # Ecuación de Mensink and Katan (2003) en mmol/L
+        cambio_ldl_grasas = (0.032 * delta_S) - (0.009 * delta_M) - (0.019 * delta_P)
+
+        # 4.2 Efecto de la fibre soluble
         delta_F = self.fibra_soluble - self.fibra_soluble_base
+        fibra_efectiva = min(delta_F, 10)  # Asumimos un efecto máximo a partir de 10g adicionales de fibra soluble
+        cambio_ldl_fibra = -0.057 * fibra_efectiva
 
-        # 4.3 Añadimos el efecto del colesterol dietético
-        delta_C = self.col_dietetico - self.col_dietetico_base
+        # 4.3 Efecto del colesterol dietético (Metaanálisis de Weggemans et al., 2001)
+        cambio_ldl_colesterol = 0.050 * ((self.col_dietetico - self.col_dietetico_base) / 100.0)  # Incremento de LDL por cada 100 mg adicionales de colesterol dietético
 
-        # 4.4 Añadimos el efecto del deficit calórico
+        # 4.4 Efecto del déficit calórico
         deficit = self.calorias_base - self.calorias
+        cambio_ldl_deficit = -0.08 * (deficit / 700.0) # Beneficio máximo de -0.08 mmol/L por alcanzar un déficit de 700 kcal
 
-        # 5. Aplicar la ecuación matemática para bajada de Colesterol LDL
-        # 5.1 Efecto de los tipos de grasa (Mensink and Katan, 2003)
-        cambio_ldl_grasas = (0.036 * delta_S) - (0.009 * delta_M) - (0.022 * delta_P)
+        # 4.5 Efecto adicional de los fitoesteroles
+        bono_fitoesteroles = 0
 
-        # 5.2 Efecto de la fibra soluble (0.057 mmol/L por cada gramo adicional de fibra soluble)
-        cambio_ldl_fibra = -0.057 * delta_F
+        if self.estado_actual == "ACTIVO":
+            if self.grupo == "Mediterránea":
+                # Ingesta moderada-alta (AOVE, frutos secos, legumbres)
+                bono_fitoesteroles = - (col_ldl_inicial * 0.04)
+            
+            elif self.grupo == "Vegetariana":
+                # Ingesta muy alta de fitoesteroles
+                bono_fitoesteroles = - (col_ldl_inicial * 0.07)
 
-        # 5.3 Efecto del colesterol dietético (Weggemans et al., 2001)
-        cambio_ldl_colesterol = 0.012 * (delta_C / 100.0)
+            else:
+                # En el grupo baja en grasas y keto no se priorizan fitoesteroles, por lo que no añadimos un bono extra
+                bono_fitoesteroles = 0
 
-        # 5.4 Efecto del déficit calórico
-        cambio_deficit = -0.08 * (deficit / 700.0)  # Beneficio máximo de -0.08 mmol/L por alcanzar un déficit de 700 kcal
+        # 5. Sumar efectos + sensibilidad genética
+        cambio_ldl_total = (cambio_ldl_grasas + cambio_ldl_fibra + cambio_ldl_colesterol + cambio_ldl_deficit) * self.sensibilidad
+        ldl_objetivo = col_ldl_inicial + cambio_ldl_total + bono_fitoesteroles
 
-        # # 5.2 Aplicar la ecuación matemática con ajuste de pesos para bajada de Colesterol LDL
-        # # Le damos mayor importancia a las grasas monoinsaturadas por el factor AOVE
-        # # cambio_ldl_grasas = (0.068 * delta_S) - (0.089 * delta_M) - (0.045 * delta_P) - (0.033 * delta_F) --> LA DE LOS BUENOS RESULTADOS
-        # cambio_ldl_grasas = (0.036 * delta_S) - (0.009 * delta_M) - (0.022 * delta_P)
+        # 6. Decaimiento exponencial hacia el objetivo
+        semana_actual = self.model.current_step
+        tasa_aclaramiento = 0.12
 
-        # 6. Colesterol Total y LDL objetivo
-        ldl_objetivo = col_ldl_inicial + cambio_ldl_grasas + cambio_ldl_fibra + cambio_ldl_colesterol + cambio_deficit
-
-        # 7. Función asintótica
-        # Si el paciente mejora, baja rápido al principio y luego se estabiliza
-        # Si el paciente empeora, el aumento es más gradual
-        if ldl_objetivo < self.col_ldl:
-            k_ldl = 0.35
-        else:
-            k_ldl = 0.15
-        
-        self.col_ldl = self.col_ldl + (ldl_objetivo - self.col_ldl) * k_ldl
+        self.col_ldl = ldl_objetivo + (self.col_ldl - ldl_objetivo) * np.exp(-tasa_aclaramiento * semana_actual)
 
 
     def step(self):

@@ -99,10 +99,6 @@ COL_TOTAL_STD_MED = 1.0
 COL_LDL_MEDIA_MED = 4.4
 COL_LDL_STD_MED = 1.0
 
-# Insulina (mmol/L)
-INSULINA_MEDIA_MED = 10.6
-INSULINA_STD_MED = 5.8
-
 
 # ==============================================================
 # DIETA BAJA EN GRASAS
@@ -179,10 +175,6 @@ COL_TOTAL_STD_LOW_FAT = 0.9
 COL_LDL_MEDIA_LOW_FAT = 4.1
 COL_LDL_STD_LOW_FAT = 0.9
 
-# Insulina (mmol/L)
-INSULINA_MEDIA_LOW_FAT = 10.6
-INSULINA_STD_LOW_FAT = 7.8
-
 
 # ==============================================================
 # DIETA KETO
@@ -258,10 +250,6 @@ COL_TOTAL_STD_KETO = 1.0
 COL_LDL_MEDIA_KETO = 4.2
 COL_LDL_STD_KETO = 1.0
 
-# Insulina (mmol/L)
-INSULINA_MEDIA_KETO = 10.6
-INSULINA_STD_KETO = 6.8
-
 
 # ==============================================================
 # DIETA VEGETARIANA
@@ -336,7 +324,3 @@ COL_TOTAL_STD_VEGETARIANA = 1.0
 # Colesterol LDL "malo" (mmol/L)
 COL_LDL_MEDIA_VEGETARIANA = 4.2
 COL_LDL_STD_VEGETARIANA = 1.0
-
-# Insulina (mmol/L)
-INSULINA_MEDIA_VEGETARIANA = 10.6
-INSULINA_STD_VEGETARIANA = 6.8
