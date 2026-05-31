@@ -46,16 +46,6 @@ class Paciente(mesa.Agent):
         self.col_total = col_total
         self.col_ldl = col_ldl
 
-        # Sensibilidad genética a la dieta (ApoE y respondedores)
-        # El 80% son normo-respondedores, un ~10% hiper-respondedores y un ~10% hipo-respondedores
-        prob_sensibilidad = np.random.random()
-        if prob_sensibilidad < 0.1:
-            self.sensibilidad = 0.5  # Hipo-respondedor (respuesta débil)
-        elif prob_sensibilidad > 0.9:
-            self.sensibilidad = 1.5  # Hiper-respondedor (respuesta fuerte, ej. portadores de ApoE4)
-        else:
-            self.sensibilidad = 1.0  # Normo-respondedor promedio
-
     def comer(self):
         '''Simula la ingesta semanal del paciente'''
 
@@ -235,7 +225,7 @@ class Paciente(mesa.Agent):
                 bono_fitoesteroles = 0
 
         # 5. Sumar efectos + sensibilidad genética
-        cambio_ldl_total = (cambio_ldl_grasas + cambio_ldl_fibra + cambio_ldl_colesterol + cambio_ldl_deficit) * self.sensibilidad
+        cambio_ldl_total = cambio_ldl_grasas + cambio_ldl_fibra + cambio_ldl_colesterol + cambio_ldl_deficit
         ldl_objetivo = col_ldl_inicial + cambio_ldl_total + bono_fitoesteroles
 
         # 6. Decaimiento exponencial hacia el objetivo
