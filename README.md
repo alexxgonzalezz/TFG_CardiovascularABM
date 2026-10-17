@@ -2,7 +2,7 @@
 
 ## Diseño y Desarrollo de un Modelo Basado en Agentes para Evaluar la Eficacia de las Intervenciones Dietéticas en la Salud Cardiovascular
 
-*Trabajo de Fin de Grado — Grado en Ingeniería y Sistemas de Datos*  
+*Trabajo de Fin de Grado — Grado en Ingeniería y Sistemas de Datos (Calificación: 10/10)*  
 **Universidad Politécnica de Madrid (ETSIT - UPM)**
 
 <p>
